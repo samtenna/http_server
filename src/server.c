@@ -6,6 +6,7 @@
 #include "server.h"
 
 #define DEFAULT_PORT "8080"
+#define DEFAULT_BUFFER_LENGTH 512
 
 bool initialise_winsock() {
     WSADATA wsaData;
@@ -67,6 +68,43 @@ bool initialise_server() {
         WSACleanup();
         return false;
     }
+
+    while (true) {
+        handle_connection(client_socket);
+    }
+
+    return true;
+}
+
+bool handle_connection(SOCKET client_socket) {
+    char buffer[DEFAULT_BUFFER_LENGTH];
+    int result;
+    int send_result;
+    int buffer_length = DEFAULT_BUFFER_LENGTH;
+
+    do {
+        result = recv(client_socket, buffer, buffer_length, 0);
+        if (result > 0) {
+            printf("%d bytes received\n", result);
+
+            // echo the buffer back to the sender
+            send_result = send(client_socket, buffer, result, 0);
+            if (send_result == SOCKET_ERROR) {
+                printf("Failed to send: %d\n", WSAGetLastError());
+                closesocket(client_socket);
+                return false;
+            }
+
+            printf("%d bytes sent.\n", send_result);
+        } else if (result == 0) {
+            printf("Closing connection.\n");
+        } else {
+            printf("recv failed: %d\n", WSAGetLastError());
+            closesocket(client_socket);
+            WSACleanup();
+            return false;
+        }
+    } while (result > 0);
 
     return true;
 }
