@@ -19,12 +19,14 @@ HttpServer *create_server(PCSTR port) {
   }
   server->port = port;
   server->socket = SOCKET_ERROR;
+  server->thead_count = 0;
 
   return server;
 }
 
 void cleanup_server(HttpServer **server) {
   closesocket((*server)->socket);
+  WSACleanup();
 
   free(*server);
   *server = NULL;
@@ -58,54 +60,53 @@ bool start_server(HttpServer *server) {
     return false;
   }
 
-  SOCKET client_socket = accept(server->socket, NULL, NULL);
-  if (client_socket == INVALID_SOCKET) {
-    // TODO: Change this so the server doesn't crash if the connection fails.
-    printf("Failed to accept client connection: %d\n", WSAGetLastError());
-    return false;
+  while (true) {
+    SOCKET client_socket = accept(server->socket, NULL, NULL);
+    if (client_socket == INVALID_SOCKET) {
+      // TODO: Change this so the server doesn't crash if the connection fails.
+      printf("Failed to accept client connection: %d\n", WSAGetLastError());
+      return false;
+    }
+
+    char request[512] = {0};
+    int bytes_received = recv(client_socket, request, 512, 0);
+
+    char *response = malloc(sizeof(char) * 512);
+    if (!process_request(request, response)) {
+      printf("Failed to read requested file.\n");
+      return false;
+    }
+
+    int bytes_sent;
+    do {
+      bytes_sent = send(client_socket, response, 512, 0);
+    } while (bytes_sent > 0);
+
+    closesocket(client_socket);
+    free(response);
   }
-
-  char request[512] = {0};
-  int bytes_received = recv(client_socket, request, 512, 0);
-  printf("Request: %s\n", request);
-
-  char *response = malloc(sizeof(char) * 512);
-  if (!process_request(request, response)) {
-    printf("Failed to read requested file.\n");
-    return false;
-  }
-
-  printf("Seinding:\n%s", response);
-
-  send(client_socket, response, 512, 0);
 
   return true;
 }
 
 bool process_request(const char *request, char *response) {
-  if (memcmp(request, "GET / ", 6)) {
+  FILE *file;
+  if (memcmp(request, "GET / ", 6) == 0) {
     // Return server root.
-    FILE *file;
     if (fopen_s(&file, "index.html", "r") != 0) {
       printf("Failed to open index.html.\n");
       return false;
     }
-
-    // TODO: some error checking here since fread doesn't differentiate between
-    // EOF and error
-    fread(response, 1, 512, file);
   } else {
-    // Return server root.
-    FILE *file;
     if (fopen_s(&file, "404.html", "r") != 0) {
       printf("Failed to open 404.html.\n");
       return false;
     }
-
-    // TODO: some error checking here since fread doesn't differentiate between
-    // EOF and error
-    fread(response, 1, 512, file);
   }
+
+  // TODO: some error checking here since fread doesn't differentiate between
+  // EOF and error
+  fread(response, 1, 512, file);
 
   return true;
 }
