@@ -1,8 +1,18 @@
-#include <stdbool.h>
+#pragma once
+
 #include <WinSock2.h>
+#include <stdbool.h>
 
-bool initialise_winsock();
+#define DEFAULT_PORT "8080"
+#define CONNECTION_QUEUE_LENGTH 10
 
-bool initialise_server();
+typedef struct HttpServer {
+  SOCKET socket;
+  PCSTR port;
+} HttpServer;
 
-bool handle_connection(SOCKET client_socket);
+HttpServer *create_server(PCSTR port);
+void cleanup_server(HttpServer **server);
+
+bool start_server(HttpServer *server);
+bool process_request(const char *request, char *response);
