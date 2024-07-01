@@ -18,4 +18,4 @@ HttpServer *create_server(PCSTR port);
 void cleanup_server(HttpServer **server);
 
 bool start_server(HttpServer *server);
-bool process_request(const char *request, char *response);
+bool process_request(char *request, char *response);

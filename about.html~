@@ -1,0 +1,8 @@
+HTTP/1.0 200 OK
+Content-Type: text/html
+Content-Length: 22
+
+<h1>About</h1>
+
+<p>My name is Inigo Montoya. You killed my father. Prepare to die.</p>
+

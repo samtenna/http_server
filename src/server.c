@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "http.h"
 #include "server.h"
 
 HttpServer *create_server(PCSTR port) {
@@ -89,18 +90,22 @@ bool start_server(HttpServer *server) {
   return true;
 }
 
-bool process_request(const char *request, char *response) {
+bool process_request(char *request, char *response) {
+  HttpRequest *parsed = parse_request(request);
+
   FILE *file;
-  if (memcmp(request, "GET / ", 6) == 0) {
+  if (strlen(parsed->path) == 0) {
     // Return server root.
     if (fopen_s(&file, "index.html", "r") != 0) {
       printf("Failed to open index.html.\n");
       return false;
     }
   } else {
-    if (fopen_s(&file, "404.html", "r") != 0) {
-      printf("Failed to open 404.html.\n");
-      return false;
+    if (fopen_s(&file, parsed->path, "r") != 0) {
+      if (fopen_s(&file, "404.html", "r") != 0) {
+        printf("Failed to open 404.html.\n");
+        return false;
+      }
     }
   }
 
